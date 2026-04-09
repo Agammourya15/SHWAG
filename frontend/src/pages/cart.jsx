@@ -1,109 +1,178 @@
 import React, { useContext, useEffect, useState } from 'react';
 import { ShopContext } from '../context/ShopContext.jsx';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { Trash2, Plus, Minus, ShoppingBag } from 'lucide-react';
+import { toast } from 'react-toastify';
 
 const Cart = () => {
-  const { products, cartItems, updateQuantity, getCartAmount } = useContext(ShopContext);
+  const { products, cartItems, updateQuantity, getCartAmount, token } = useContext(ShopContext);
   const [cartData, setCartData] = useState([]);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const tempData = [];
-    for (const items in cartItems) {
-      for (const item in cartItems[items]) {
-        if (cartItems[items][item] > 0) {
-          tempData.push({
-            _id: items,
-            size: item,
-            quantity: cartItems[items][item]
-          });
+    for (const itemId in cartItems) {
+      for (const size in cartItems[itemId]) {
+        if (cartItems[itemId][size] > 0) {
+          tempData.push({ _id: itemId, size, quantity: cartItems[itemId][size] });
         }
       }
     }
     setCartData(tempData);
   }, [cartItems]);
 
-  return (
-    <div className='border-t pt-14 pb-24 px-4 sm:px-[5vw] md:px-[7vw] lg:px-[9vw]'>
-      <div className='text-2xl mb-8 flex justify-between items-end border-b pb-4'>
-        <h2 className="text-3xl uppercase tracking-widest font-bold">Your <span className="text-gray-400 font-light">Cart</span></h2>
-        <span className='font-light text-sm tracking-widest text-gray-500 uppercase'>{cartData.length} Items</span>
-      </div>
+  const shippingFee = 10;
+  const subtotal = getCartAmount();
+  const total = subtotal === 0 ? 0 : subtotal + shippingFee;
 
-      <div>
+  return (
+    <div className='bg-white min-h-screen pt-[88px]'>
+      <div className='max-w-screen-xl mx-auto px-4 sm:px-8 lg:px-16 py-10 pb-24'>
+
+        {/* Header */}
+        <div className='flex items-end justify-between pb-5 border-b-2 border-black mb-8'>
+          <h1 className='text-3xl sm:text-4xl font-bold uppercase tracking-wide text-black'>Shopping Bag</h1>
+          <span className='text-xs font-bold uppercase tracking-widest text-gray-500'>{cartData.length} {cartData.length === 1 ? 'item' : 'items'}</span>
+        </div>
+
         {cartData.length === 0 ? (
-          <div className='flex flex-col items-center justify-center py-20 text-center text-gray-500'>
-            <svg className="w-16 h-16 mb-6 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg>
-            <p className='text-xl tracking-widest font-light'>Your cart is currently empty.</p>
-            <Link to="/" className='mt-8 bg-black text-white px-8 py-3 text-sm font-bold uppercase tracking-widest hover:bg-gray-800 transition-colors'>Return to Shop</Link>
+          /* Empty cart */
+          <div className='flex flex-col items-center justify-center py-24 text-center'>
+            <ShoppingBag className='w-16 h-16 text-gray-200 mb-6' strokeWidth={1} />
+            <h2 className='text-xl font-bold uppercase tracking-widest text-gray-800 mb-2'>Your bag is empty</h2>
+            <p className='text-sm text-gray-400 font-light mb-8 tracking-wide'>Add something you love to get started!</p>
+            <Link to='/' className='hm-btn-black'>Continue Shopping</Link>
           </div>
         ) : (
-          cartData.map((item, index) => {
-            const productData = products.find((product) => product._id === item._id);
-            if (!productData) return null;
+          <div className='flex flex-col lg:flex-row gap-10 lg:gap-16'>
 
-            return (
-              <div key={index} className='py-6 border-b text-gray-700 grid grid-cols-[4fr_0.5fr_0.5fr] sm:grid-cols-[4fr_2fr_0.5fr] items-center gap-4 group'>
-                <div className='flex items-start gap-6'>
-                  <Link to={`/product/${productData._id}`}>
-                    <img className='w-20 sm:w-24 aspect-[3/4] object-cover transition-transform group-hover:scale-105' src={productData.image[0]} alt="" />
-                  </Link>
-                  <div>
-                    <p className='text-sm sm:text-lg font-bold tracking-widest uppercase mb-1'>{productData.name}</p>
-                    <div className='flex items-center gap-4 text-xs tracking-widest uppercase text-gray-500 mt-2 font-light'>
-                      <p>${productData.price.toFixed(2)}</p>
-                      <p className='px-2 py-1 border border-gray-300 bg-gray-50 text-black font-medium'>{item.size}</p>
+            {/* ── Cart Items ─────────────────────────────────────────────── */}
+            <div className='flex-1'>
+              {cartData.map((item, index) => {
+                const product = products.find(p => p._id === item._id);
+                if (!product) return null;
+                return (
+                  <div key={index} className='flex gap-4 sm:gap-6 py-6 border-b border-gray-100 items-start'>
+                    {/* Image */}
+                    <Link to={`/product/${product._id}`} className='flex-shrink-0'>
+                      <img
+                        src={product.image[0]}
+                        alt={product.name}
+                        className='w-24 sm:w-32 aspect-[3/4] object-cover bg-gray-50 hover:opacity-90 transition-opacity'
+                      />
+                    </Link>
+
+                    {/* Info */}
+                    <div className='flex-1 flex flex-col justify-between min-h-[120px]'>
+                      <div>
+                        <p className='text-xs font-bold uppercase tracking-[0.2em] text-gray-400 mb-1'>{product.category}</p>
+                        <Link to={`/product/${product._id}`}>
+                          <h3 className='text-sm sm:text-base font-bold uppercase tracking-widest text-black hover:text-gray-600 transition-colors leading-tight mb-1'>
+                            {product.name}
+                          </h3>
+                        </Link>
+                        <p className='text-xs text-gray-500 uppercase tracking-widest font-semibold'>Size: {item.size}</p>
+                      </div>
+
+                      <div className='flex items-end justify-between mt-4'>
+                        {/* Qty stepper */}
+                        <div className='flex items-center border border-gray-300'>
+                          <button
+                            className='w-8 h-8 flex items-center justify-center text-black hover:bg-gray-50 transition-colors'
+                            onClick={() => item.quantity > 1 && updateQuantity(item._id, item.size, item.quantity - 1)}
+                          >
+                            <Minus className='w-3 h-3' />
+                          </button>
+                          <span className='w-10 text-center text-sm font-semibold'>{item.quantity}</span>
+                          <button
+                            className='w-8 h-8 flex items-center justify-center text-black hover:bg-gray-50 transition-colors'
+                            onClick={() => updateQuantity(item._id, item.size, item.quantity + 1)}
+                          >
+                            <Plus className='w-3 h-3' />
+                          </button>
+                        </div>
+
+                        <div className='flex items-center gap-4'>
+                          <span className='text-sm font-bold text-black'>₹{(product.price * item.quantity).toFixed(2)}</span>
+                          <button
+                            onClick={() => updateQuantity(item._id, item.size, 0)}
+                            className='text-gray-400 hover:text-[#E50010] transition-colors p-1'
+                            aria-label='Remove item'
+                          >
+                            <Trash2 className='w-4 h-4' />
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
-                <div className='flex justify-center'>
-                  <input
-                    onChange={(e) => e.target.value === '' || e.target.value === '0' ? null : updateQuantity(item._id, item.size, Number(e.target.value))}
-                    className='border border-gray-300 px-1 py-1 sm:px-2 sm:py-2 text-center w-12 sm:w-16 focus:outline-none focus:ring-1 focus:ring-black'
-                    type="number"
-                    min={1}
-                    defaultValue={item.quantity}
-                  />
-                </div>
-                <div className='flex justify-end'>
-                  <svg
-                    onClick={() => updateQuantity(item._id, item.size, 0)}
-                    className='w-5 h-5 cursor-pointer text-gray-400 hover:text-red-500 transition-colors'
-                    fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                  </svg>
-                </div>
-              </div>
-            )
-          })
-        )}
-      </div>
-
-      {cartData.length > 0 && (
-        <div className='flex justify-end my-20'>
-          <div className='w-full sm:w-[500px] border border-gray-200 p-8 bg-gray-50'>
-            <h2 className='text-xl sm:text-2xl uppercase tracking-widest font-bold mb-6 pb-4 border-b border-gray-300 text-gray-900'>Order Summary</h2>
-            <div className='flex flex-col gap-4 text-sm font-light tracking-wide uppercase'>
-              <div className='flex justify-between'>
-                <p>Subtotal</p>
-                <p className="font-medium tracking-widest">${getCartAmount().toFixed(2)}</p>
-              </div>
-              <hr className="border-gray-200" />
-              <div className='flex justify-between'>
-                <p>Shipping Fee</p>
-                <p className="font-medium tracking-widest">$10.00</p>
-              </div>
-              <hr className="border-gray-200" />
-              <div className='flex justify-between mb-4'>
-                <p className='font-bold text-base text-gray-900'>Total</p>
-                <p className="font-bold text-base tracking-widest text-gray-900">${(getCartAmount() === 0 ? 0 : getCartAmount() + 10).toFixed(2)}</p>
-              </div>
+                );
+              })}
             </div>
-            <div className='w-full text-end mt-4'>
-              <button className='bg-black text-white text-xs sm:text-sm font-bold uppercase tracking-widest px-8 py-5 hover:bg-gray-800 transition-colors w-full'>Proceed to Checkout</button>
+
+            {/* ── Order Summary ──────────────────────────────────────────── */}
+            <div className='lg:w-80 xl:w-96'>
+              <div className='border border-gray-200 p-6 sticky top-28'>
+                <h2 className='text-sm font-bold uppercase tracking-widest text-black pb-4 border-b border-gray-200 mb-4'>
+                  Order Summary
+                </h2>
+
+                <div className='flex flex-col gap-3 text-sm mb-4'>
+                  <div className='flex justify-between items-center'>
+                    <span className='text-gray-600 tracking-wide'>Subtotal</span>
+                    <span className='font-semibold text-black'>₹{subtotal.toFixed(2)}</span>
+                  </div>
+                  <div className='flex justify-between items-center'>
+                    <span className='text-gray-600 tracking-wide'>Delivery</span>
+                    <span className='font-semibold text-black'>
+                      {subtotal > 499 ? <span className='text-green-600'>FREE</span> : `₹${shippingFee.toFixed(2)}`}
+                    </span>
+                  </div>
+                  {subtotal > 0 && subtotal <= 499 && (
+                    <p className='text-xs text-[#E50010] font-semibold tracking-wide'>
+                      Add ₹{(499 - subtotal).toFixed(2)} more for free delivery!
+                    </p>
+                  )}
+                </div>
+
+                <div className='flex justify-between items-center py-4 border-t-2 border-black mb-5'>
+                  <span className='text-base font-bold uppercase tracking-widest text-black'>Total</span>
+                  <span className='text-lg font-bold text-black'>₹{total.toFixed(2)}</span>
+                </div>
+
+                {/* Promo code */}
+                <div className='flex gap-0 mb-5'>
+                  <input
+                    type='text'
+                    placeholder='Promo code'
+                    className='flex-1 border border-gray-300 px-3 py-2.5 text-xs uppercase tracking-widest focus:outline-none focus:border-black'
+                  />
+                  <button className='bg-black text-white px-4 py-2.5 text-xs font-bold uppercase tracking-widest hover:bg-gray-800 transition-colors'>
+                    Apply
+                  </button>
+                </div>
+
+                <button
+                  onClick={() => {
+                    if (!token) {
+                      toast.error('Please sign in to proceed to checkout');
+                      navigate('/login');
+                      return;
+                    }
+                    navigate('/place-order');
+                  }}
+                  className='hm-btn-red w-full text-center py-4'
+                >
+                  Proceed to Checkout
+                </button>
+
+                <Link to='/' className='block text-center text-xs uppercase tracking-widest font-bold text-gray-500 hover:text-black transition-colors mt-4 underline underline-offset-4'>
+                  Continue Shopping
+                </Link>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 };

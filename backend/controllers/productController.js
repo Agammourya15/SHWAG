@@ -31,4 +31,27 @@ const getProductById = async (req, res) => {
     }
 };
 
-export { getProducts, getProductById };
+// @desc    Create a product
+// @route   POST /api/products
+// @access  Private/Admin
+const createProduct = async (req, res) => {
+    try {
+        const product = new Product({
+            name: req.body.name,
+            price: req.body.price,
+            description: req.body.description,
+            image: req.body.image || [],
+            category: req.body.category || 'Women',
+            subCategory: req.body.subCategory || '',
+            countInStock: req.body.countInStock || 0,
+            isSold: req.body.isSold || false,
+        });
+
+        const createdProduct = await product.save();
+        res.status(201).json(createdProduct);
+    } catch (error) {
+        res.status(400).json({ message: 'Invalid product data', error: error.message });
+    }
+};
+
+export { getProducts, getProductById, createProduct };
